@@ -5,7 +5,6 @@ idf_component_register(
         "src"
     REQUIRES
         cap_lua
-        esp_board_manager
         esp_driver_touch_sens
 )
 
