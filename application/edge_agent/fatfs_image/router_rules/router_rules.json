@@ -60,8 +60,36 @@
     ]
   },
   {
+    "id": "im_list_sessions",
+    "description": "List persistent chat sessions when the user sends /list.",
+    "enabled": true,
+    "consume_on_match": true,
+    "ack": "{{event.source_channel}} session list handled",
+    "match": {
+      "event_type": "message",
+      "event_key": "text",
+      "content_type": "text",
+      "text": "/list",
+      "text_match_rule": "prefix"
+    },
+    "actions": [
+      {
+        "type": "call_cap",
+        "cap": "list_chat_sessions",
+        "input": {}
+      },
+      {
+        "type": "send_message",
+        "input": {
+          "channel": "{{event.source_channel}}",
+          "chat_id": "{{event.chat_id}}"
+        }
+      }
+    ]
+  },
+  {
     "id": "im_switch_session",
-    "description": "List or switch persistent chat sessions when the user sends /switch.",
+    "description": "Switch persistent chat sessions when the user sends /switch.",
     "enabled": true,
     "consume_on_match": true,
     "ack": "{{event.source_channel}} session switch handled",
