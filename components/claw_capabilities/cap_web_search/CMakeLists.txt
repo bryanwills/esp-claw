@@ -8,6 +8,5 @@ idf_component_register(
         claw_cap
         esp_http_client
         http_reuse
-        json
         console
 )
