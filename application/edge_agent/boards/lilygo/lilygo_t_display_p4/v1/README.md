@@ -1,28 +1,27 @@
 # Lilygo T-Display-P4 Board Support
 
-## **English | [Chinese](./README_CN.md)**
+## **English | [中文](./README_CN.md)**
 
 Upstream board repository:
 [T-Display-P4](https://github.com/Xinyuan-LilyGO/T-Display-P4)
 
 ## Overview
 
-This board keeps the ESP Board Manager entry points small and explicit. The
-custom devices no longer call `TDisplayP4Driver::Init()`, because that routine
-brings up the whole board. Power, display, brightness, and ES8311 audio are
-exposed as separate Board Manager devices:
+This board follows the ESP Board Manager v0.5.12 device model. The XL9535 power
+rails and reset lines are configured by the standard `gpio_expander` device.
+`setup_device.c` probes only the GT9895 touch ID before panel creation: GT9895
+present selects the RM69A10 AMOLED path, and GT9895 absent falls back to the
+HI8561 LCD path. HI8561 touch is created after the LCD panel is initialized
+because its touch address information is read from the HI8561 controller.
 
 | Device name | Purpose |
 | --- | --- |
-| `power_ctrl` | Initializes and configures XL9535 only, then releases the Board Manager I2C reference. |
+| `gpio_expander_xl9535` | Drives Power_EN_3V3, Power_EN_5V0, Screen_RST, Touch_RST, and Vcca_EN from YAML. |
+| `display_lcd` | Selects RM69A10 or HI8561 DSI timing at runtime from the GT9895 probe result. |
+| `lcd_touch` | Creates GT9895 (`0xba`/`0x28`) or HI8561 (`0xd0`) touch after the panel variant is known. |
+| `lcd_brightness` | Uses Board Manager `ledc_ctrl` on GPIO51 for the HI8561 LEDC backlight path; RM69A10 brightness is set by DCS `0x51` in `esp_lcd_rm69a10.c`. |
 | `audio_dac` | Initializes the ES8311 playback path through Board Manager `audio_codec`. |
 | `audio_adc` | Initializes the ES8311 capture path through Board Manager `audio_codec`. |
-| `display_lcd` | Initializes the auto-detected MIPI LCD panel and exposes the panel handle. |
-| `lcd_brightness` | Initializes and controls only the detected screen backlight path. |
-
-Other board interfaces are described in `board_peripherals.yaml` so esp-claw
-can bind future devices to Board Manager peripherals without having them hidden
-inside a full Lilygo board initialization.
 
 ## Directory Layout
 
@@ -30,14 +29,15 @@ inside a full Lilygo board initialization.
 | --- | --- |
 | `board_info.yaml` | Board name, chip, manufacturer, and description metadata. |
 | `board_devices.yaml` | Board Manager device list and component dependencies. |
-| `board_peripherals.yaml` | Reusable I2C, I2S, SPI, and UART interfaces for esp-claw devices. |
-| `Kconfig.projbuild` | Camera type and pixel format options. |
-| `sdkconfig.defaults.board` | Default configuration for flash, PSRAM, display support, Hosted Wi-Fi, camera, and logs. |
-| `setup_device.cpp` | Custom power, display, and brightness device implementation. |
+| `board_peripherals.yaml` | Reusable I2C, I2S, DSI, LDO, LEDC, SPI, and UART interfaces. |
+| `sdkconfig.defaults.board` | Default configuration for flash, PSRAM, display support, Hosted Wi-Fi, and camera. |
+| `setup_device.c` | Board factory entries for XL9535, DSI LCD panel selection, and touch driver selection. |
+| `esp_lcd_hi8561.c` | HI8561 DSI LCD panel driver and init sequence. |
+| `esp_lcd_rm69a10.c` | RM69A10 DSI LCD panel driver and init sequence. |
+| `esp_lcd_touch_hi8561.c` | HI8561 touch driver that exposes an `esp_lcd_touch_handle_t`. |
+| `esp_lcd_touch_gt9895.c` | GT9895 touch driver that exposes an `esp_lcd_touch_handle_t`. |
 
 ## Quick Start
-
-### Generate Board Manager Files
 
 Run this command from `application/edge_agent`:
 
@@ -54,34 +54,3 @@ components/gen_bmgr_codes
 > [!IMPORTANT]
 > `managed_components\espressif__esp_board_manager` must exist before running
 > this command, otherwise generation will fail.
-> On Windows PowerShell, keep `PYTHONIOENCODING` set to `utf-8` if the console
-> cannot print the generator's Unicode status icons.
-
-### Required sdkconfig Configuration
-
-Make sure the board defaults are merged into the project configuration. The
-generated sdkconfig defaults are written to:
-
-```text
-components/gen_bmgr_codes/board_manager.defaults
-```
-
-### Board Options
-
-The board-specific Kconfig menu provides these options:
-
-| Option group | Choices |
-| --- | --- |
-| Camera type | `OV2710`, `SC2336`, `OV5645` |
-| Screen pixel format | `RGB565`, `RGB888` |
-| Camera pixel format | `RGB565`, `RGB888` |
-
-Default configuration:
-
-- `OV2710`
-- screen format `RGB565`
-- camera format `RGB565`
-
-If you use another camera or pixel format, adjust the corresponding
-Kconfig options through `sdkconfig.defaults.board` or `menuconfig` before
-generation/build.
