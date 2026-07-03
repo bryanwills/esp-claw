@@ -1,33 +1,28 @@
-cmake_minimum_required(VERSION 3.12)
-project (lv_emscripten)
+cmake_minimum_required(VERSION 3.14)
+project(lv_emscripten C CXX)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -s USE_SDL=2")
 get_filename_component(ESP_CLAW_ROOT "${PROJECT_SOURCE_DIR}/../.." ABSOLUTE)
 
-include_directories(${PROJECT_SOURCE_DIR})
+include(FetchContent)
 
-add_subdirectory(lvgl)
-file(GLOB MY_SOURCES "./*.c")
-set(SOURCES ${MY_SOURCES})
+set(LV_CONF_PATH "${PROJECT_SOURCE_DIR}/lv_conf.h" CACHE FILEPATH "LVGL config file" FORCE)
+set(LV_CONF_INCLUDE_SIMPLE ON CACHE BOOL "Use simple lv_conf include" FORCE)
 
-add_executable(index ${SOURCES} ${INCLUDES})
-
-if(NOT LVGL_CHOSEN_DEMO)
-    set(LVGL_CHOSEN_DEMO lv_demo_widgets)
-endif()
-set_source_files_properties(main.c PROPERTIES COMPILE_FLAGS -DCHOSEN_DEMO=${LVGL_CHOSEN_DEMO})
-
-set(CMAKE_EXECUTABLE_SUFFIX ".html")
-target_link_libraries(index
+FetchContent_Declare(
     lvgl
-    lvgl_examples
-    lvgl_demos
-    lvgl_thorvg
-    SDL2
+    GIT_REPOSITORY https://github.com/lvgl/lvgl.git
+    GIT_TAG c29651105d7c150789b9c53de7dab8bff67daee4
 )
-set_target_properties(index PROPERTIES LINK_FLAGS "--shell-file ${PROJECT_SOURCE_DIR}/lvgl_shell.html -s INITIAL_MEMORY=33554432")
+FetchContent_MakeAvailable(lvgl)
 
-set(LUA_SRC_DIR ${PROJECT_SOURCE_DIR}/third_party/lua-5.4.8/src)
+FetchContent_Declare(
+    lua
+    URL https://www.lua.org/ftp/lua-5.4.8.tar.gz
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
+FetchContent_MakeAvailable(lua)
+set(LUA_SRC_DIR ${lua_SOURCE_DIR}/src)
 set(LUA_SOURCES
     ${LUA_SRC_DIR}/lapi.c
     ${LUA_SRC_DIR}/lcode.c
@@ -92,7 +87,7 @@ function(configure_esp_claw_sim_target target_name)
 target_include_directories(${target_name} PRIVATE
     ${LUA_SRC_DIR}
     ${PROJECT_SOURCE_DIR}/sim/compat
-    ${PROJECT_SOURCE_DIR}/lvgl
+    ${lvgl_SOURCE_DIR}
     ${ESP_CLAW_ROOT}/components/lua_modules/lua_module_lvgl/src
 )
 target_compile_definitions(${target_name} PRIVATE LUA_USE_C89)

@@ -1,61 +1,32 @@
-# Emscripten port
+# ESP-Claw Lua LVGL Web Simulator
 
-**LVGL ported to Emscripten to be converted to JavaScript**
+This directory contains the Emscripten build for the ESP-Claw Lua LVGL
+simulator. It intentionally keeps only simulator-specific source files in the
+repository.
 
-The result looks like this: [https://lvgl.io/demos](https://lvgl.io/demos)
+Third-party dependencies are fetched into the CMake build directory:
 
-# How to get started
+- LVGL `v9.3.0`
+- Lua `5.4.8`
 
-## Install SDL
+## Build
 
-Download [SDL](https://www.libsdl.org/) (a graphics library to open a window and handle the mouse). On Linux:
+From an Emscripten environment:
 
-1. Find the current version of SDL2: `apt-cache search libsdl2` (e.g., `libsdl2-2.0-0`)
-1. Install SDL2: `sudo apt-get install libsdl2-2.0-0` (replace with the found version)
-1. Install the SDL2 development package: `sudo apt-get install libsdl2-dev`
-1. If build essentials are not installed yet: `sudo apt-get install build-essential`
-
----
-
-## Install Emscripten SDK
-
-Download the [Emscripten SDK](https://kripken.github.io/emscripten-site/) and make sure it is in your `PATH`.
-
-1. `git clone https://github.com/emscripten-core/emsdk.git`
-1. `cd emsdk`
-1. `git pull`
-1. `./emsdk install latest`
-1. `./emsdk activate latest`
-1. `source ./emsdk_env.sh`
-
-More info here: [Emscripten Downloads](https://kripken.github.io/emscripten-site/docs/getting_started/downloads.html)
-
----
-
-## Get the Emscripten-LVGL project
-
-1. Be sure you ran `. <path-to-emsdk>/emsdk_env.sh` to add EMSDK to `PATH`
-1. In any directory: `git clone --recursive https://github.com/lvgl/lv_web_emscripten.git`
-1. `cd lv_web_emscripten`
-1. `mkdir cmbuild`
-1. `cd cmbuild`
-1. `emcmake cmake ..`
-1. `emmake make -j4`
-1. A file called `index.html` will be generated. Open this in your browser
-
----
-
-### Build options (environment variables)
-
-* `LVGL_CHOSEN_DEMO` can be set to the desired demo name so that you don't need to change any C files. This is useful to compile many demos in bulk using a script.
-
-Example: 
 ```bash
-emcmake cmake .. -DLVGL_CHOSEN_DEMO=lv_demo_widgets
+emcmake cmake -S tools/lua_lvgl_web_sim -B build/lua_lvgl_web_sim -G Ninja -DCMAKE_BUILD_TYPE=Release
+emmake ninja -C build/lua_lvgl_web_sim esp_claw_sim esp_claw_sim_release
 ```
 
-### Known issue with Google Chrome browser
-Chrome might not be able to open the generated HTML file offline. It works if you copy the files to a server. Use Firefox or other browser for offline testing if needed.
+The normal simulator page uses `esp_claw_sim.html`, `esp_claw_sim.js`,
+`esp_claw_sim.wasm`, and `esp_claw_sim.data`. The release target produces a
+single-file HTML build.
 
-### Known issue with Firefox
-Firefox might not be able to open the generated HTML file offline unless you go to `about:config` and change `privacy.file_unique_origin` to `false`.
+## Runtime Assets
+
+The simulator-specific runtime files live in:
+
+- `sim/` for the C/JS runtime bridge and Lua shims
+- `sim/compat/` for ESP/Lua compatibility headers
+- `sim_assets/` for preloaded simulator assets such as fonts
+- `tools/` for local helper scripts such as the stream proxy
